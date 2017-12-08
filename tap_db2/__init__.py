@@ -7,7 +7,7 @@ import singer
 from singer import utils
 from singer.catalog import Catalog
 from .discovery import discover
-from . import catalogs, sync
+from . import resolve, sync
 
 REQUIRED_CONFIG_KEYS = ["start_date", "db2_system", "db2_uid", "db2_pwd"]
 LOGGER = singer.get_logger()
@@ -22,7 +22,7 @@ def main_impl():
         if not os.getenv("DEVELOPMENT_FLAG"):
             return
         input_catalog = Catalog.from_dict(args.properties)
-        catalog = catalogs.resolve(input_catalog, input_catalog, args.state)
+        catalog = resolve.resolve(input_catalog, input_catalog, args.state)
         sync.sync(args.config, args.state, catalog)
 
 

@@ -1,8 +1,8 @@
 from collections import namedtuple
 from itertools import groupby
 from singer.catalog import Catalog, CatalogEntry
+from ..common import get_cursor
 from . import schemas
-from .common import get_cursor
 
 Table = namedtuple("Table", [
     "table_schema",
