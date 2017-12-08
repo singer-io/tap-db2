@@ -6,8 +6,7 @@ from collections import namedtuple
 import singer
 from singer import utils
 from singer.catalog import Catalog
-from .discovery import discover
-from . import resolve, sync
+from . import resolve, sync, discovery
 
 REQUIRED_CONFIG_KEYS = ["start_date", "db2_system", "db2_uid", "db2_pwd"]
 LOGGER = singer.get_logger()
@@ -16,7 +15,7 @@ LOGGER = singer.get_logger()
 def main_impl():
     args = utils.parse_args(REQUIRED_CONFIG_KEYS)
     if args.discover:
-        discover(args.config).dump()
+        discovery.discover(args.config).dump()
         print()
     else:
         if not os.getenv("DEVELOPMENT_FLAG"):

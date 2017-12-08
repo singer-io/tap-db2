@@ -40,7 +40,8 @@ def test_basic_discovery(pks_mock, columns_mock, tables_mock):
 
 @mock.patch("tap_db2.discovery._query_tables")
 @mock.patch("tap_db2.discovery._query_columns")
-def test_decimal_types(columns_mock, tables_mock):
+@mock.patch("tap_db2.discovery._query_primary_keys")
+def test_decimal_types(pks_mock, columns_mock, tables_mock):
     tables_mock.return_value = [
         ("a_schema", "a_table", "T"),
     ]
