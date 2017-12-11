@@ -8,7 +8,7 @@ from singer import utils
 from singer.catalog import Catalog
 from . import resolve, sync, discovery
 
-REQUIRED_CONFIG_KEYS = ["start_date", "db2_system", "db2_uid", "db2_pwd"]
+REQUIRED_CONFIG_KEYS = ["db2_system", "db2_uid", "db2_pwd"]
 LOGGER = singer.get_logger()
 
 

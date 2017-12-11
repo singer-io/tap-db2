@@ -62,8 +62,6 @@ def _for_column(col):
     else:
         err = "Unsupported data type {}".format(data_type)
         result = Schema(None, inclusion="unsupported", description=err)
-        with open("unsupported.txt", "a") as f:
-            f.write(err + "\n")
     return result
 
 
