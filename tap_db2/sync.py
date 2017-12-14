@@ -29,7 +29,8 @@ def _get_replication_key(state: dict, catalog_entry: CatalogEntry):
     if not column:
         return None
     value = _get_bk(state, tap_stream_id, "replication_key_value")
-    if catalog_entry.schema.properties[column].format == "date-time":
+    is_dt_val = catalog_entry.schema.properties[column].format == "date-time"
+    if value and is_dt_val:
         value = pendulum.parse(value)
     return ReplicationKey(column, value)
 

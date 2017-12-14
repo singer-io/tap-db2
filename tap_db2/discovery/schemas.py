@@ -55,7 +55,8 @@ def _for_column(col):
         result.multipleOf = 10 ** (0 - col.numeric_scale)
     elif data_type in STRING_TYPES:
         result.type = ["null", "string"]
-        result.maxLength = col.character_maximum_length
+        if col.character_maximum_length > 0:
+            result.maxLength = col.character_maximum_length
     elif data_type in DATETIME_TYPES:
         result.type = ["null", "string"]
         result.format = "date-time"
