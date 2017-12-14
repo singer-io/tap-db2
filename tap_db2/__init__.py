@@ -1,8 +1,4 @@
 #!/usr/bin/env python3
-import os
-import sys
-import json
-from collections import namedtuple
 import singer
 from singer import utils
 from singer.catalog import Catalog
