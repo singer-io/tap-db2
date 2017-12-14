@@ -15,7 +15,7 @@ _set_bk = singer.write_bookmark
 ReplicationKey = namedtuple("ReplicationKey", ["column", "value"])
 
 
-def _escape(x):
+def _quote(x):
     return '"{}"'.format(x.replace('"', '""'))
 
 
@@ -29,24 +29,25 @@ def _get_replication_key(state: dict, catalog_entry: CatalogEntry):
     if not column:
         return None
     value = _get_bk(state, tap_stream_id, "replication_key_value")
-    if catalog_entry.schema.properties[column].format == "date-time":
+    is_dt_val = catalog_entry.schema.properties[column].format == "date-time"
+    if value and is_dt_val:
         value = pendulum.parse(value)
     return ReplicationKey(column, value)
 
 
 def _create_sql(catalog_entry: CatalogEntry, columns, rep_key: ReplicationKey):
-    escaped_columns = [_escape(c) for c in columns]
+    escaped_columns = [_quote(c) for c in columns]
     select = "SELECT {} FROM {}.{}".format(
         ",".join(escaped_columns),
-        _escape(catalog_entry.database),
-        _escape(catalog_entry.table))
+        _quote(catalog_entry.database),
+        _quote(catalog_entry.table))
     params = ()
     if not rep_key:
         return select, params
     if rep_key.value:
-        select += " WHERE `{}` >= ?".format(rep_key.column)
+        select += " WHERE {} >= ?".format(_quote(rep_key.column))
         params = (rep_key.value,)
-    select += " ORDER BY `{}` ASC".format(rep_key.column)
+    select += " ORDER BY {} ASC".format(_quote(rep_key.column))
     return select, params
 
 

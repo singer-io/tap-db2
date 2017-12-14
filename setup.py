@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from setuptools import setup, find_packages
+from setuptools import setup
 
 setup(
     name="tap-db2",
@@ -8,7 +8,6 @@ setup(
     author="Stitch",
     url="http://singer.io",
     classifiers=["Programming Language :: Python :: 3 :: Only"],
-    py_modules=["tap_db2"],
     install_requires=[
         "singer-python>=3.2.0",
         "pyodbc",
@@ -17,6 +16,6 @@ setup(
     [console_scripts]
     tap-db2=tap_db2:main
     """,
-    packages=["tap_db2"],
+    packages=["tap_db2", "tap_db2.discovery"],
     include_package_data=True,
 )
