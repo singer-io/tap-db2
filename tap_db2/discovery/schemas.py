@@ -21,13 +21,13 @@ DECIMAL_TYPES = {
 STRING_TYPES = {
     "char",
     "varchar",
-    "time",
 }
 
 # https://www.ibm.com/support/knowledgecenter/ssw_ibm_i_71/db2/rbafzch2datetime.htm
 DATETIME_TYPES = {
     "date",
     "timestmp",
+    "time",
 }
 
 # Parent article for data types:

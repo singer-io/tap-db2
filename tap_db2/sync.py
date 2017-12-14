@@ -1,6 +1,7 @@
-from datetime import datetime, date, time
+from datetime import datetime, date, time, timedelta
 from time import time as time_
 from collections import namedtuple
+from functools import reduce
 import pendulum
 import singer
 import singer.metrics as metrics
@@ -23,14 +24,17 @@ def _get_stream_version(tap_stream_id, state):
     return _get_bk(state, tap_stream_id, "version") or int(time_() * 1000)
 
 
+def _is_datetime_col(catalog_entry, column):
+    return catalog_entry.schema.properties[column].format == "date-time"
+
+
 def _get_replication_key(state: dict, catalog_entry: CatalogEntry):
     tap_stream_id = catalog_entry.tap_stream_id
     column = _get_bk(state, tap_stream_id, "replication_key")
     if not column:
         return None
     value = _get_bk(state, tap_stream_id, "replication_key_value")
-    is_dt_val = catalog_entry.schema.properties[column].format == "date-time"
-    if value and is_dt_val:
+    if value and _is_datetime_col(catalog_entry, column):
         value = pendulum.parse(value)
     return ReplicationKey(column, value)
 
@@ -51,11 +55,12 @@ def _create_sql(catalog_entry: CatalogEntry, columns, rep_key: ReplicationKey):
     return select, params
 
 
-def _row_to_record(catalog_entry, version, row, columns):
+def _row_to_record(catalog_entry, version, row, columns, current_timezone):
     row_to_persist = ()
     for elem in row:
         if isinstance(elem, datetime):
-            row_to_persist += (elem.isoformat() + "+00:00",)
+            utc_dt = elem + current_timezone
+            row_to_persist += (utc_dt.isoformat() + "+00:00",)
         elif isinstance(elem, date):
             row_to_persist += (elem.isoformat() + "T00:00:00+00:00",)
         elif isinstance(elem, time):
@@ -107,7 +112,7 @@ def _maybe_activate_after_sync(state, catalog_entry, rep_key, stream_version):
     return state
 
 
-def _sync_table(config, state, catalog_entry):
+def _sync_table(config, state, catalog_entry, current_timezone):
     # log_engine(connection, catalog_entry)
     columns = list(catalog_entry.schema.properties)
     if not columns:
@@ -128,7 +133,7 @@ def _sync_table(config, state, catalog_entry):
         for row in cursor:
             rows_saved += 1
             record_message = _row_to_record(catalog_entry, stream_version, row,
-                                            columns)
+                                            columns, current_timezone)
             _emit(record_message)
             if rep_key:
                 state = _set_bk(state, tap_stream_id, "replication_key_value",
@@ -140,7 +145,22 @@ def _sync_table(config, state, catalog_entry):
     _emit(singer.StateMessage(value=state))
 
 
+def _current_timezone(config) -> timedelta:
+    # https://www.ibm.com/support/knowledgecenter/ssw_ibm_i_71/db2/rbafzc2curtz.htm
+    with get_cursor(config) as cursor:
+        cursor.execute("select current timezone from qsys2.systables limit 1")
+        number = cursor.fetchone()[0]  # type Decimal
+        sign, digits, exponent = number.as_tuple()
+        assert exponent == 0
+        mult = -1 if sign == 1 else 1
+        to_int = lambda x: mult * reduce(lambda rst, d: rst * 10 + d, x)
+        return timedelta(hours=to_int(digits[-6:-4]),
+                         minutes=to_int(digits[-4:-2]),
+                         seconds=to_int(digits[-2:]))
+
+
 def sync(config, state, catalog):
+    current_timezone = _current_timezone(config)
     for catalog_entry in catalog.streams:
         state = singer.set_currently_syncing(state, catalog_entry.tap_stream_id)
         _emit(singer.StateMessage(value=state))
@@ -151,6 +171,6 @@ def sync(config, state, catalog):
         with metrics.job_timer("sync_table") as timer:
             timer.tags["schema"] = catalog_entry.database
             timer.tags["table"] = catalog_entry.table
-            _sync_table(config, state, catalog_entry)
+            _sync_table(config, state, catalog_entry, current_timezone)
     state = singer.set_currently_syncing(state, None)
     _emit(singer.StateMessage(value=state))
