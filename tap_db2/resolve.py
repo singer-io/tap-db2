@@ -1,3 +1,8 @@
+"""Functions which accept user input, like a state or catalog, and modifies
+them for use during the sync process.
+
+The functions herein were taken nearly verbatim from
+https://github.com/singer-io/tap-mysql/"""
 from itertools import dropwhile
 import singer
 import singer.schema
