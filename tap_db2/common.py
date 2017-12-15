@@ -1,13 +1,14 @@
 import pyodbc
 import backoff
 
+# pylint: disable=no-member
+
 
 @backoff.on_exception(backoff.expo,
                       (pyodbc.OperationalError),
                       max_tries=5,
                       factor=2)
 def connection(config):
-    # pylint: disable=no-member
     return pyodbc.connect(
         driver="{iSeries Access ODBC Driver 64-bit}",
         system=config["db2_system"],

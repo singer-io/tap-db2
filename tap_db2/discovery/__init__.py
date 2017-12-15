@@ -1,5 +1,4 @@
 from collections import namedtuple
-from itertools import groupby
 from singer.catalog import Catalog, CatalogEntry
 from singer import metadata
 from ..common import get_cursor
@@ -21,6 +20,8 @@ Column = namedtuple("Column", [
     "numeric_scale",
 ])
 
+SUPPORTED_TYPES = {"T", "V"}
+
 
 # Note the _query_* functions mainly exist for the sake of mocking in unit
 # tests. Normally I would prefer to have integration tests than mock out this
@@ -35,7 +36,6 @@ def _query_tables(config):
                    table_name,
                    table_type
               FROM qsys2.systables
-             WHERE table_type in ('T', 'V')
         """)
         yield from cursor
 
@@ -85,16 +85,29 @@ def _find_tables(config):
     # information_schema.tables because it contains better information
     # about the "table_type." The information_schema table doesn't
     # distinguish between tables and data files.
-    results = _query_tables(config)
-    tbls = [Table(*rec) for rec in results]
+    tbls = [Table(*rec) for rec in _query_tables(config)]
     return {_table_id(t): t for t in tbls}
 
 
+def _col_table_id(column):
+    """Returns a 2-tuple representing the column's table ID. See also
+    _table_id."""
+    return (column.table_schema, column.table_name)
+
+
 def _find_columns(config, tables):
-    results = _query_columns(config)
-    cols = (Column(*rec) for rec in results)
-    return [c for c in cols
-            if (c.table_schema, c.table_name) in tables]
+    cols = (Column(*rec) for rec in _query_columns(config))
+    ret = {}
+    for col in cols:
+        table_id = _col_table_id(col)
+        if table_id not in tables:
+            continue
+        if tables[table_id].table_type not in SUPPORTED_TYPES:
+            continue
+        if table_id not in ret:
+            ret[table_id] = []
+        ret[table_id].append(col)
+    return ret
 
 
 def _find_primary_keys(config, tables):
@@ -125,13 +138,13 @@ def _create_column_metadata(cols, schema):
     for col in cols:
         col_schema = schema.properties[col.column_name]
         mdata = metadata.write(mdata,
-                               ("properties", col.column_name),
-                               "selected-by-default",
-                               col_schema.inclusion != "unsupported")
+                               breadcrumb=("properties", col.column_name),
+                               k="selected-by-default",
+                               val=(col_schema.inclusion != "unsupported"))
         mdata = metadata.write(mdata,
-                               ("properties", col.column_name),
-                               "sql-datatype",
-                               col.column_type.lower())
+                               breadcrumb=("properties", col.column_name),
+                               k="sql-datatype",
+                               val=col.data_type.lower())
     return metadata.to_list(mdata)
 
 
@@ -144,7 +157,7 @@ def _update_entry_for_table_type(catalog_entry, table_type):
         "M": "Materialized query table",
         "P": "Physical file",
     }
-    if table_type not in ["T", "V"]:
+    if table_type not in SUPPORTED_TYPES:
         catalog_entry.schema.inclusion = "unsupported"
         hint = known_types.get(table_type, "Unknown")
         err = "Unsupported table type {} ({})".format(table_type, hint)
@@ -156,9 +169,9 @@ def discover(config):
     columns = _find_columns(config, tables)
     pks = _find_primary_keys(config, tables)
     entries = []
-    for (table_id, cols) in groupby(columns, _table_id):
+    for table_id in tables:
         table_schema, table_name = table_id
-        cols = list(cols)
+        cols = columns.get(table_id, [])
         pk_columns = pks.get(table_id, [])
         schema = schemas.generate(cols, pk_columns)
         entry = CatalogEntry(

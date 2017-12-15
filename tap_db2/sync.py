@@ -1,12 +1,12 @@
-from datetime import datetime, date, time, timedelta
+from datetime import datetime, date, time
 from time import time as time_
 from collections import namedtuple
-from functools import reduce
 import pendulum
 import singer
 import singer.metrics as metrics
 from singer.catalog import CatalogEntry
 from singer import write_message as _emit
+from singer import metadata
 from .common import get_cursor
 
 LOGGER = singer.get_logger()
@@ -39,8 +39,17 @@ def _get_replication_key(state: dict, catalog_entry: CatalogEntry):
     return ReplicationKey(column, value)
 
 
+def _column_sql(catalog_entry: CatalogEntry, column: str):
+    data_type = metadata.get(metadata.to_map(catalog_entry.metadata),
+                             breadcrumb=("properties", column),
+                             k="sql-datatype")
+    if data_type == "timestmp":  # No that's not a typo
+        return "{} - CURRENT TIMEZONE".format(_quote(column))
+    return _quote(column)
+
+
 def _create_sql(catalog_entry: CatalogEntry, columns, rep_key: ReplicationKey):
-    escaped_columns = [_quote(c) for c in columns]
+    escaped_columns = [_column_sql(catalog_entry, c) for c in columns]
     select = "SELECT {} FROM {}.{}".format(
         ",".join(escaped_columns),
         _quote(catalog_entry.database),
@@ -55,12 +64,11 @@ def _create_sql(catalog_entry: CatalogEntry, columns, rep_key: ReplicationKey):
     return select, params
 
 
-def _row_to_record(catalog_entry, version, row, columns, current_timezone):
+def _row_to_record(catalog_entry, version, row, columns):
     row_to_persist = ()
     for elem in row:
         if isinstance(elem, datetime):
-            utc_dt = elem + current_timezone
-            row_to_persist += (utc_dt.isoformat() + "+00:00",)
+            row_to_persist += (elem.isoformat() + "+00:00",)
         elif isinstance(elem, date):
             row_to_persist += (elem.isoformat() + "T00:00:00+00:00",)
         elif isinstance(elem, time):
@@ -112,7 +120,7 @@ def _maybe_activate_after_sync(state, catalog_entry, rep_key, stream_version):
     return state
 
 
-def _sync_table(config, state, catalog_entry, current_timezone):
+def _sync_table(config, state, catalog_entry):
     columns = list(catalog_entry.schema.properties)
     if not columns:
         LOGGER.warning(
@@ -132,7 +140,7 @@ def _sync_table(config, state, catalog_entry, current_timezone):
         for row in cursor:
             rows_saved += 1
             record_message = _row_to_record(catalog_entry, stream_version, row,
-                                            columns, current_timezone)
+                                            columns)
             _emit(record_message)
             if rep_key:
                 state = _set_bk(state, tap_stream_id, "replication_key_value",
@@ -144,22 +152,7 @@ def _sync_table(config, state, catalog_entry, current_timezone):
     _emit(singer.StateMessage(value=state))
 
 
-def _current_timezone(config) -> timedelta:
-    # https://www.ibm.com/support/knowledgecenter/ssw_ibm_i_71/db2/rbafzc2curtz.htm
-    with get_cursor(config) as cursor:
-        cursor.execute("select current timezone from qsys2.systables limit 1")
-        number = cursor.fetchone()[0]  # type Decimal
-        sign, digits, exponent = number.as_tuple()
-        assert exponent == 0
-        mult = -1 if sign == 1 else 1
-        to_int = lambda x: mult * reduce(lambda rst, d: rst * 10 + d, x)
-        return timedelta(hours=to_int(digits[-6:-4]),
-                         minutes=to_int(digits[-4:-2]),
-                         seconds=to_int(digits[-2:]))
-
-
 def sync(config, state, catalog):
-    current_timezone = _current_timezone(config)
     for catalog_entry in catalog.streams:
         state = singer.set_currently_syncing(state, catalog_entry.tap_stream_id)
         _emit(singer.StateMessage(value=state))
@@ -170,6 +163,6 @@ def sync(config, state, catalog):
         with metrics.job_timer("sync_table") as timer:
             timer.tags["schema"] = catalog_entry.database
             timer.tags["table"] = catalog_entry.table
-            _sync_table(config, state, catalog_entry, current_timezone)
+            _sync_table(config, state, catalog_entry)
     state = singer.set_currently_syncing(state, None)
     _emit(singer.StateMessage(value=state))

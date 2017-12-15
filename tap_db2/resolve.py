@@ -99,6 +99,7 @@ def resolve_catalog(catalog, discovered, state):
             tap_stream_id=catalog_entry.tap_stream_id,
             key_properties=catalog_entry.key_properties,
             stream=catalog_entry.stream,
+            metadata=catalog_entry.metadata,
             database=catalog_entry.database,
             table=catalog_entry.table,
             replication_key=catalog_entry.replication_key,
@@ -114,8 +115,6 @@ def resolve_catalog(catalog, discovered, state):
 
 
 def build_state(raw_state, catalog):
-    LOGGER.info('Building State from raw state %s and catalog %s', raw_state, catalog.to_dict())
-
     state = {}
 
     currently_syncing = singer.get_currently_syncing(raw_state)

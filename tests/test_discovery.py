@@ -2,6 +2,12 @@ import mock
 import tap_db2.discovery as d
 
 
+def _update(dict_, **kwargs):
+    new = dict_.copy()
+    new.update(kwargs)
+    return new
+
+
 @mock.patch("tap_db2.discovery._query_tables")
 @mock.patch("tap_db2.discovery._query_columns")
 @mock.patch("tap_db2.discovery._query_primary_keys")
@@ -23,19 +29,36 @@ def test_basic_discovery(pks_mock, columns_mock, tables_mock):
     streams = catalog["streams"]
     float_schema = {"inclusion": "available", "type": ["null", "number"]}
     expected_schema = {
-        "properties": {"a_column": float_schema,
-                       "b_column": float_schema,
+        "properties": {"a_column": _update(float_schema, inclusion="automatic"),
+                       "b_column": _update(float_schema, inclusion="automatic"),
                        "c_column": float_schema},
-        "selected": False,
         "type": "object",
     }
-    assert streams[0] == {"database_name": "a_schema",
-                          "table_name": "a_table",
-                          "tap_stream_id": "a_schema-a_table",
-                          "schema": expected_schema,
-                          "stream": "a_table",
-                          "is_view": False,
-                          "key_properties": ["b_column", "a_column"]}
+    streams[0]["metadata"].sort(key=lambda x: x["breadcrumb"])
+    import pprint
+    import sys
+    pprint.pprint(streams[0])
+    assert streams[0] == {
+        "database_name": "a_schema",
+        "table_name": "a_table",
+        "tap_stream_id": "a_schema-a_table",
+        "schema": expected_schema,
+        "stream": "a_table",
+        "is_view": False,
+        "key_properties": ["b_column", "a_column"],
+        "metadata": [{"breadcrumb": (),
+                      "metadata": {"selected-by-default": False}},
+                     {"breadcrumb": ("properties", "a_column"),
+                      "metadata": {"selected-by-default": True,
+                                   "sql-datatype": "float"}},
+                     {"breadcrumb": ("properties", "b_column"),
+                      "metadata": {"selected-by-default": True,
+                                   "sql-datatype": "float"}},
+                     {"breadcrumb": ("properties", "c_column"),
+                      "metadata": {"selected-by-default": True,
+                                   "sql-datatype": "float"}}],
+    }
+
 
 
 @mock.patch("tap_db2.discovery._query_tables")
