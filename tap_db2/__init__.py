@@ -8,15 +8,23 @@ REQUIRED_CONFIG_KEYS = ["db2_system", "db2_uid", "db2_pwd"]
 LOGGER = singer.get_logger()
 
 
+def do_sync(args, input_catalog):
+    state = resolve.build_state(args.state, input_catalog)
+    catalog = resolve.resolve_catalog(input_catalog, input_catalog, state)
+    sync.sync(args.config, state, catalog)
+
+
 def main_impl():
     args = utils.parse_args(REQUIRED_CONFIG_KEYS)
     if args.discover:
         discovery.discover(args.config).dump()
         print()
+    elif args.catalog:
+        do_sync(args, args.catalog)
+    elif args.properties:
+        do_sync(args, Catalog.from_dict(args.properties))
     else:
-        input_catalog = Catalog.from_dict(args.properties)
-        catalog = resolve.resolve(input_catalog, input_catalog, args.state)
-        sync.sync(args.config, args.state, catalog)
+        LOGGER.info("No properties were selected")
 
 
 def main():

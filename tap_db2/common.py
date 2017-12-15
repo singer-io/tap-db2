@@ -1,6 +1,11 @@
 import pyodbc
+import backoff
 
 
+@backoff.on_exception(backoff.expo,
+                      (pyodbc.OperationalError),
+                      max_tries=5,
+                      factor=2)
 def connection(config):
     # pylint: disable=no-member
     return pyodbc.connect(

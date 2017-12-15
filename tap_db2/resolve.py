@@ -7,7 +7,7 @@ from singer.catalog import Catalog, CatalogEntry
 LOGGER = singer.get_logger()
 
 
-def desired_columns(selected, table_schema):
+def _desired_columns(selected, table_schema):
 
     '''Return the set of column names we need to include in the SELECT.
     selected - set of column names marked as selected in the input catalog
@@ -51,7 +51,7 @@ def desired_columns(selected, table_schema):
     return selected.intersection(available).union(automatic)
 
 
-def resolve(catalog, discovered, state):
+def resolve_catalog(catalog, discovered, state):
     '''Returns the Catalog of data we're going to sync.
     Takes the Catalog we read from the input file and turns it into a
     Catalog representing exactly which tables and columns we're going to
@@ -93,7 +93,7 @@ def resolve(catalog, discovered, state):
                         if v.selected or k == catalog_entry.replication_key])
 
         # These are the columns we need to select
-        columns = desired_columns(selected, discovered_table.schema)
+        columns = _desired_columns(selected, discovered_table.schema)
 
         result.streams.append(CatalogEntry(
             tap_stream_id=catalog_entry.tap_stream_id,
@@ -111,3 +111,47 @@ def resolve(catalog, discovered, state):
         ))
 
     return result
+
+
+def build_state(raw_state, catalog):
+    LOGGER.info('Building State from raw state %s and catalog %s', raw_state, catalog.to_dict())
+
+    state = {}
+
+    currently_syncing = singer.get_currently_syncing(raw_state)
+    if currently_syncing:
+        state = singer.set_currently_syncing(state, currently_syncing)
+
+    for catalog_entry in catalog.streams:
+        if catalog_entry.replication_key:
+            state = singer.write_bookmark(state,
+                                          catalog_entry.tap_stream_id,
+                                          'replication_key',
+                                          catalog_entry.replication_key)
+
+            # Only keep the existing replication_key_value if the
+            # replication_key hasn't changed.
+            raw_replication_key = singer.get_bookmark(raw_state,
+                                                      catalog_entry.tap_stream_id,
+                                                      'replication_key')
+            if raw_replication_key == catalog_entry.replication_key:
+                raw_replication_key_value = singer.get_bookmark(raw_state,
+                                                                catalog_entry.tap_stream_id,
+                                                                'replication_key_value')
+                state = singer.write_bookmark(state,
+                                              catalog_entry.tap_stream_id,
+                                              'replication_key_value',
+                                              raw_replication_key_value)
+
+        # Persist any existing version, even if it's None
+        if raw_state.get('bookmarks', {}).get(catalog_entry.tap_stream_id):
+            raw_stream_version = singer.get_bookmark(raw_state,
+                                                     catalog_entry.tap_stream_id,
+                                                     'version')
+
+            state = singer.write_bookmark(state,
+                                          catalog_entry.tap_stream_id,
+                                          'version',
+                                          raw_stream_version)
+
+    return state

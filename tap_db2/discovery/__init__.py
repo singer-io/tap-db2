@@ -1,6 +1,7 @@
 from collections import namedtuple
 from itertools import groupby
 from singer.catalog import Catalog, CatalogEntry
+from singer import metadata
 from ..common import get_cursor
 from . import schemas
 
@@ -118,6 +119,38 @@ def _find_primary_keys(config, tables):
     }
 
 
+def _create_column_metadata(cols, schema):
+    mdata = {}
+    mdata = metadata.write(mdata, (), "selected-by-default", False)
+    for col in cols:
+        col_schema = schema.properties[col.column_name]
+        mdata = metadata.write(mdata,
+                               ("properties", col.column_name),
+                               "selected-by-default",
+                               col_schema.inclusion != "unsupported")
+        mdata = metadata.write(mdata,
+                               ("properties", col.column_name),
+                               "sql-datatype",
+                               col.column_type.lower())
+    return metadata.to_list(mdata)
+
+
+def _update_entry_for_table_type(catalog_entry, table_type):
+    catalog_entry.is_view = table_type == "V"
+    # https://www.ibm.com/support/knowledgecenter/ssw_ibm_i_71/db2/rbafzcatsystbls.htm
+    known_types = {
+        "A": "Alias",
+        "L": "Logical file",
+        "M": "Materialized query table",
+        "P": "Physical file",
+    }
+    if table_type not in ["T", "V"]:
+        catalog_entry.schema.inclusion = "unsupported"
+        hint = known_types.get(table_type, "Unknown")
+        err = "Unsupported table type {} ({})".format(table_type, hint)
+        catalog_entry.schema.description = err
+
+
 def discover(config):
     tables = _find_tables(config)
     columns = _find_columns(config, tables)
@@ -126,17 +159,17 @@ def discover(config):
     for (table_id, cols) in groupby(columns, _table_id):
         table_schema, table_name = table_id
         cols = list(cols)
-        schema = schemas.generate(cols)
+        pk_columns = pks.get(table_id, [])
+        schema = schemas.generate(cols, pk_columns)
         entry = CatalogEntry(
             database=table_schema,
             table=table_name,
             stream=table_name,
+            metadata=_create_column_metadata(cols, schema),
             tap_stream_id="{}-{}".format(table_schema, table_name),
             schema=schema)
         if table_id in pks:
             entry.key_properties = pks[table_id]
-        # if table_schema in table_info and table_name in table_info[table_schema]:
-        #     entry.row_count = table_info[table_schema][table_name]["row_count"]
-        entry.is_view = tables[table_id].table_type == "V"
+        _update_entry_for_table_type(entry, tables[table_id].table_type)
         entries.append(entry)
     return Catalog(entries)

@@ -32,12 +32,11 @@ DATETIME_TYPES = {
 
 # Parent article for data types:
 # https://www.ibm.com/support/knowledgecenter/ssw_ibm_i_71/db2/rbafzch2data.htm
-def _for_column(col):
+def _for_column(col, pk_columns):
     data_type = col.data_type.lower()
     inclusion = "available"
-    # We want to automatically include all primary key columns
-    # if col.column_key.lower() == "pri":
-    #     inclusion = "automatic"
+    if col.column_name.lower() in [x.lower() for x in pk_columns]:
+        inclusion = "automatic"
     result = Schema(inclusion=inclusion)
     if data_type in BYTES_FOR_INTEGER_TYPE:
         result.type = ["null", "integer"]
@@ -66,6 +65,6 @@ def _for_column(col):
     return result
 
 
-def generate(columns):
-    properties = {c.column_name: _for_column(c) for c in columns}
-    return Schema(type="object", selected=False, properties=properties)
+def generate(columns, pk_columns):
+    properties = {c.column_name: _for_column(c, pk_columns) for c in columns}
+    return Schema(type="object", properties=properties)

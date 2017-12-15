@@ -113,7 +113,6 @@ def _maybe_activate_after_sync(state, catalog_entry, rep_key, stream_version):
 
 
 def _sync_table(config, state, catalog_entry, current_timezone):
-    # log_engine(connection, catalog_entry)
     columns = list(catalog_entry.schema.properties)
     if not columns:
         LOGGER.warning(
