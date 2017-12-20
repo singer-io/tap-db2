@@ -68,6 +68,16 @@ The tap does not make any effort to restore these files to their original
 settings. Be aware that the modifications to these files may affect any other
 software on your system that may use them.
 
+When you are ready to use your custom port, you can update your `config.json`
+to use the `db2_port` option, likeso:
+
+```
+{
+  "db2_system": "some-host",
+  "db2_port": 1234
+}
+```
+
 ---
 
 Copyright &copy; 2017 Stitch
