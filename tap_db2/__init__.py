@@ -2,7 +2,7 @@
 import singer
 from singer import utils
 from singer.catalog import Catalog
-from . import resolve, sync, discovery
+from . import resolve, sync, discovery, common
 
 REQUIRED_CONFIG_KEYS = ["db2_system", "db2_uid", "db2_pwd"]
 LOGGER = singer.get_logger()
@@ -16,6 +16,7 @@ def do_sync(args, input_catalog):
 
 def main_impl():
     args = utils.parse_args(REQUIRED_CONFIG_KEYS)
+    common.setup_port_configuration(args.config)
     if args.discover:
         discovery.discover(args.config).dump()
         print()
