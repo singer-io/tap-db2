@@ -24,9 +24,9 @@ This tap:
 
    ```json
    {
-       "db2_system": "127.0.0.1",
-       "db2_uid": "your-db2-username",
-       "db2_pwd": "your-db2-password"
+       "host": "127.0.0.1",
+       "user": "your-db2-username",
+       "password": "your-db2-password"
    }
    ```
 
@@ -69,12 +69,12 @@ settings. Be aware that the modifications to these files may affect any other
 software on your system that may use them.
 
 When you are ready to use your custom port, you can update your `config.json`
-to use the `db2_port` option, likeso:
+to use the `port` option, likeso:
 
 ```
 {
-  "db2_system": "some-host",
-  "db2_port": 1234
+  "host": "some-host",
+  "port": 1234
 }
 ```
 

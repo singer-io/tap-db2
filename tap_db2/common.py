@@ -7,7 +7,6 @@ import backoff
 
 # pylint: disable=no-member
 
-
 def _write_userprefs(host, port):
     """Creates or updates the ~/.iSeriesAccess/cwb_userprefs.ini file to
     specify a "Port lookup mode", which controls how the driver determines
@@ -50,8 +49,8 @@ def _write_port_to_services(port):
 
 
 def setup_port_configuration(config):
-    host = config["db2_system"]
-    port = config.get("db2_port")
+    host = config["host"]
+    port = config.get("port")
     _write_userprefs(host, port)
     if port:
         _write_port_to_services(port)
@@ -66,9 +65,9 @@ def connection(config):
     # https://www.ibm.com/support/knowledgecenter/ssw_ibm_i_71/rzaik/rzaikconnstrkeywordsgeneralprop.htm
     return pyodbc.connect(
         driver="{iSeries Access ODBC Driver 64-bit}",
-        system=config["db2_system"],
-        uid=config["db2_uid"],
-        pwd=config["db2_pwd"])
+        system=config["host"],
+        uid=config["user"],
+        pwd=config["password"])
 
 
 class get_cursor(object):
