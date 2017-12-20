@@ -23,12 +23,15 @@ This tap:
    Create a JSON file called `config.json`. Its contents should look like:
 
    ```json
-    {
-        "db2_system": "127.0.0.1",
-        "db2_uid": "your-db2-username",
-        "db2_pwd": "your-db2-password"
-    }
-    ```
+   {
+       "db2_system": "127.0.0.1",
+       "db2_uid": "your-db2-username",
+       "db2_pwd": "your-db2-password"
+   }
+   ```
+
+   If you need to use a custom port (the default being 8471), see [Custom
+   Ports](#custom-ports) for more information.
 
 3. Run the tap in discovery mode
 
@@ -44,6 +47,36 @@ This tap:
    ```
    tap-db2 -c config.json -p catalog.json
    ```
+
+## Custom Ports
+
+This tap supports using a custom port to connect to your DB2 instance, but
+there are some important considerations. The IBM ODBC driver has a roundabout
+way of determining the port to connect to. The process the tap takes to
+configure the port is:
+
+- Update the `~/.iSeriesAccess/cwb_userprefs.ini` file and set `Port lookup
+  mode` to `1`, which tells the driver to use the `/etc/services` file as a
+  lookup for the port to use.
+- Update the `/etc/services` file to set the `as-database` port to whatever
+  port has been chosen.
+
+In order to write the port to `/etc/services`, the tap must be run as a user
+that has write permissions on it.
+
+The tap does not make any effort to restore these files to their original
+settings. Be aware that the modifications to these files may affect any other
+software on your system that may use them.
+
+When you are ready to use your custom port, you can update your `config.json`
+to use the `db2_port` option, likeso:
+
+```
+{
+  "db2_system": "some-host",
+  "db2_port": 1234
+}
+```
 
 ---
 
