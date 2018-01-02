@@ -36,6 +36,7 @@ def _query_tables(config):
                    table_name,
                    table_type
               FROM qsys2.systables
+             WHERE table_type IN ('T', 'V')
         """)
         yield from cursor
 
