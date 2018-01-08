@@ -4,7 +4,7 @@ from singer import utils
 from singer.catalog import Catalog
 from . import resolve, sync, discovery, common
 
-REQUIRED_CONFIG_KEYS = ["host", "port", "user", "password"]
+REQUIRED_CONFIG_KEYS = ["host", "user", "password"]
 LOGGER = singer.get_logger()
 
 

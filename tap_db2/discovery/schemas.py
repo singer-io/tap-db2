@@ -46,12 +46,15 @@ def _for_column(col, pk_columns):
     elif data_type in FLOAT_TYPES:
         result.type = ["null", "number"]
     elif data_type in DECIMAL_TYPES:
-        result.type = ["null", "number"]
+        if col.numeric_scale == 0:
+            result.type = ["null", "integer"]
+        else:
+            result.type = ["null", "number"]
+            result.multipleOf = 10 ** (0 - col.numeric_scale)
         result.exclusiveMaximum = True
         result.maximum = 10 ** (col.numeric_precision - col.numeric_scale)
         result.exclusiveMinimum = True
         result.minimum = -10 ** (col.numeric_precision - col.numeric_scale)
-        result.multipleOf = 10 ** (0 - col.numeric_scale)
     elif data_type in STRING_TYPES:
         result.type = ["null", "string"]
         if col.character_maximum_length > 0:
