@@ -20,7 +20,7 @@ Column = namedtuple("Column", [
     "numeric_scale",
 ])
 
-SUPPORTED_TYPES = {"T", "V"}
+SUPPORTED_TYPES = {"T", "V", "P"}
 
 
 # Note the _query_* functions mainly exist for the sake of mocking in unit
@@ -36,7 +36,7 @@ def _query_tables(config):
                    table_name,
                    table_type
               FROM qsys2.systables
-             WHERE table_type IN ('T', 'V')
+             WHERE table_type IN ('T', 'V', 'P')
         """)
         yield from cursor
 
