@@ -1,3 +1,4 @@
+import csv
 from collections import namedtuple
 from singer.catalog import Catalog, CatalogEntry
 from singer import metadata
@@ -23,6 +24,9 @@ Column = namedtuple("Column", [
 SUPPORTED_TYPES = {"T", "V", "P"}
 
 
+def _question_marks(lst):
+    return ",".join("?" * len(lst))
+
 # Note the _query_* functions mainly exist for the sake of mocking in unit
 # tests. Normally I would prefer to have integration tests than mock out this
 # data, but DB2 databases aren't easy to come by and if there is a lot of data
@@ -30,14 +34,21 @@ SUPPORTED_TYPES = {"T", "V", "P"}
 def _query_tables(config):
     """Queries the qsys2 tables catalog and returns an iterator containing the
     raw results."""
+    sql = """
+        SELECT table_schema,
+               table_name,
+               table_type
+          FROM qsys2.systables
+         WHERE table_type IN ({})
+    """.format(_question_marks(SUPPORTED_TYPES))
+    bindings = list(SUPPORTED_TYPES)
+    schema_csv = config.get("filter_schemas", "")
+    schemas_ = [s.strip() for s in next(csv.reader([schema_csv]))]
+    if schemas_:
+        sql += "AND table_schema IN ({})".format(_question_marks(schemas_))
+        bindings += schemas_
     with get_cursor(config) as cursor:
-        cursor.execute("""
-            SELECT table_schema,
-                   table_name,
-                   table_type
-              FROM qsys2.systables
-             WHERE table_type IN ('T', 'V', 'P')
-        """)
+        cursor.execute(sql, bindings)
         yield from cursor
 
 

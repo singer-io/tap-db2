@@ -33,6 +33,18 @@ This tap:
    If you need to use a custom port (the default being 8471), see [Custom
    Ports](#custom-ports) for more information.
 
+   If you would like to limit discovery to a set of certain schemas, you can do
+   so by providing the `"filter_schemas"` key in the configuration. This should
+   be a CSV string of schemas. For example:
+
+   ```json
+   {
+       "host": "127.0.0.1",
+       ...
+       "filter_schemas": "schema1,schema2,schema3"
+   }
+   ```
+
 3. Run the tap in discovery mode
 
    ```
