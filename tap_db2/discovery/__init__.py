@@ -157,6 +157,8 @@ def _create_column_metadata(cols, schema):
                                breadcrumb=("properties", col.column_name),
                                k="sql-datatype",
                                val=col.data_type.lower())
+    mdata = metadata.write(mdata, breadcrumb=(), k="valid-replication-keys",
+                           val=schemas.valid_replication_keys(cols))
     return metadata.to_list(mdata)
 
 

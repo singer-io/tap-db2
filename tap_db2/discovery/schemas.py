@@ -30,6 +30,16 @@ DATETIME_TYPES = {
     "time",
 }
 
+VALID_REPLICATION_KEY_TYPES = {
+    "smallint",
+    "integer",
+    "bigint",
+    "decimal",
+    "numeric",
+    "date",
+    "timestmp",
+}
+
 # Parent article for data types:
 # https://www.ibm.com/support/knowledgecenter/ssw_ibm_i_71/db2/rbafzch2data.htm
 def _for_column(col, pk_columns):
@@ -68,3 +78,8 @@ def _for_column(col, pk_columns):
 def generate(columns, pk_columns):
     properties = {c.column_name: _for_column(c, pk_columns) for c in columns}
     return Schema(type="object", properties=properties)
+
+
+def valid_replication_keys(columns):
+    return [c.column_name for c in columns
+            if c.data_type.lower() in VALID_REPLICATION_KEY_TYPES]
