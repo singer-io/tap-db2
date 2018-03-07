@@ -88,6 +88,8 @@ def resolve_catalog(catalog, discovered, state):
     # Iterate over the streams in the input catalog and match each one up
     # with the same stream in the discovered catalog.
     for catalog_entry in streams:
+        catalog_metadata = metadata.to_map(catalog_entry.metadata)
+        replication_key = catalog_metadata.get((), {}).get('replication-key')
 
         discovered_table = discovered.get_stream(catalog_entry.tap_stream_id)
         if not discovered_table:
@@ -95,7 +97,7 @@ def resolve_catalog(catalog, discovered, state):
                            catalog_entry.database, catalog_entry.table)
             continue
         selected = set([k for k, v in catalog_entry.schema.properties.items()
-                        if v.selected or k == catalog_entry.replication_key])
+                        if v.selected or k == replication_key])
 
         # These are the columns we need to select
         columns = _desired_columns(selected, discovered_table.schema)
@@ -107,7 +109,6 @@ def resolve_catalog(catalog, discovered, state):
             metadata=catalog_entry.metadata,
             database=catalog_entry.database,
             table=catalog_entry.table,
-            replication_key=catalog_entry.replication_key,
             is_view=catalog_entry.is_view,
             schema=Schema(
                 type='object',
@@ -127,18 +128,19 @@ def build_state(raw_state, catalog):
         state = singer.set_currently_syncing(state, currently_syncing)
 
     for catalog_entry in catalog.streams:
-        if catalog_entry.replication_key:
+        replication_key = catalog_metadata.get((), {}).get('replication-key')
+        if replication_key:
             state = singer.write_bookmark(state,
                                           catalog_entry.tap_stream_id,
                                           'replication_key',
-                                          catalog_entry.replication_key)
+                                          replication_key)
 
             # Only keep the existing replication_key_value if the
             # replication_key hasn't changed.
             raw_replication_key = singer.get_bookmark(raw_state,
                                                       catalog_entry.tap_stream_id,
                                                       'replication_key')
-            if raw_replication_key == catalog_entry.replication_key:
+            if raw_replication_key == replicaiton_key:
                 raw_replication_key_value = singer.get_bookmark(raw_state,
                                                                 catalog_entry.tap_stream_id,
                                                                 'replication_key_value')

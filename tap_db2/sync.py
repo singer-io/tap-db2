@@ -154,12 +154,17 @@ def _sync_table(config, state, catalog_entry):
 
 def sync(config, state, catalog):
     for catalog_entry in catalog.streams:
+        catalog_metadata = metadata.to_map(catalog_entry.metadata)
+        replication_key = catalog_metadata.get((), {}).get('replication-key')
+
         state = singer.set_currently_syncing(state, catalog_entry.tap_stream_id)
         _emit(singer.StateMessage(value=state))
         _emit(singer.SchemaMessage(
             stream=catalog_entry.stream,
             schema=catalog_entry.schema.to_dict(),
-            key_properties=catalog_entry.key_properties))
+            key_properties=catalog_entry.key_properties,
+            bookmark_properties=replication_key
+          ))
         with metrics.job_timer("sync_table") as timer:
             timer.tags["schema"] = catalog_entry.database
             timer.tags["table"] = catalog_entry.table
