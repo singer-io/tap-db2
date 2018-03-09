@@ -104,7 +104,6 @@ def resolve_catalog(catalog, discovered, state):
 
         result.streams.append(CatalogEntry(
             tap_stream_id=catalog_entry.tap_stream_id,
-            key_properties=catalog_entry.key_properties,
             stream=catalog_entry.stream,
             metadata=catalog_entry.metadata,
             database=catalog_entry.database,

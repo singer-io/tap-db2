@@ -144,8 +144,10 @@ def _find_primary_keys(config, tables):
     }
 
 
-def _create_column_metadata(cols, schema):
+def _create_column_metadata(cols, schema, pk_columns):
     mdata = {}
+    mdata.append({'metadata': {'table-key-properties' : pk_columns}, 'breadcrumb': ()})
+
     mdata = metadata.write(mdata, (), "selected-by-default", False)
     for col in cols:
         col_schema = schema.properties[col.column_name]
@@ -157,6 +159,7 @@ def _create_column_metadata(cols, schema):
                                breadcrumb=("properties", col.column_name),
                                k="sql-datatype",
                                val=col.data_type.lower())
+
     mdata = metadata.write(mdata, breadcrumb=(), k="valid-replication-keys",
                            val=schemas.valid_replication_keys(cols))
     return metadata.to_list(mdata)
@@ -192,11 +195,10 @@ def discover(config):
             database=table_schema,
             table=table_name,
             stream=table_name,
-            metadata=_create_column_metadata(cols, schema),
+            metadata=_create_column_metadata(cols, schema, pk_columns),
             tap_stream_id="{}-{}".format(table_schema, table_name),
             schema=schema)
-        if table_id in pks:
-            entry.key_properties = pks[table_id]
+
         _update_entry_for_table_type(entry, tables[table_id].table_type)
         entries.append(entry)
     return Catalog(entries)
