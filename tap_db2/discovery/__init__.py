@@ -19,6 +19,7 @@ Column = namedtuple("Column", [
     "character_maximum_length",
     "numeric_precision",
     "numeric_scale",
+    "ccsid",
 ])
 
 SUPPORTED_TYPES = {"T", "V", "P"}
@@ -63,7 +64,8 @@ def _query_columns(config):
                    data_type,
                    character_maximum_length,
                    numeric_precision,
-                   numeric_scale
+                   numeric_scale,
+                   ccsid
               FROM qsys2.syscolumns
         """)
         yield from cursor

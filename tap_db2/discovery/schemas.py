@@ -22,6 +22,9 @@ STRING_TYPES = {
     "char",
     "varchar",
 }
+UNSUPPORTED_CCSIDS = {
+    65535,
+}
 
 # https://www.ibm.com/support/knowledgecenter/ssw_ibm_i_71/db2/rbafzch2datetime.htm
 DATETIME_TYPES = {
@@ -63,9 +66,13 @@ def _for_column(col, pk_columns):
         result.minimum = -10 ** (col.numeric_precision - col.numeric_scale)
         result.multipleOf = 10 ** (0 - col.numeric_scale)
     elif data_type in STRING_TYPES:
-        result.type = ["null", "string"]
-        if col.character_maximum_length > 0:
-            result.maxLength = col.character_maximum_length
+        if col.ccsid in UNSUPPORTED_CCSIDS:
+            err = "Unsupported CCSID {}".format(col.ccsid)
+            result = Schema(None, inclusion="unsupported", description=err)
+        else:
+            result.type = ["null", "string"]
+            if col.character_maximum_length > 0:
+                result.maxLength = col.character_maximum_length
     elif data_type in DATETIME_TYPES:
         result.type = ["null", "string"]
         result.format = "date-time"
