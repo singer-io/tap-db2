@@ -1,9 +1,11 @@
 import csv
 from collections import namedtuple
 from singer.catalog import Catalog, CatalogEntry
+import singer
 from singer import metadata
 from ..common import get_cursor
 from . import schemas
+LOGGER = singer.get_logger()
 
 Table = namedtuple("Table", [
     "table_schema",
@@ -51,12 +53,16 @@ def _query_tables(config):
         cursor.execute(sql, bindings)
         yield from cursor
 
-
 def _query_columns(config):
     """Queries the qsys2 columns catalog and returns an iterator containing the
     raw results."""
     with get_cursor(config) as cursor:
-        cursor.execute("""
+        sql = """
+        """
+        schema_csv = config.get("filter_schemas", "")
+        binds = [s.strip() for s in next(csv.reader([schema_csv]))]
+        if len(binds) != 0:
+            sql = """
             SELECT table_schema,
                    table_name,
                    column_name,
@@ -65,9 +71,22 @@ def _query_columns(config):
                    numeric_precision,
                    numeric_scale
               FROM qsys2.syscolumns
-        """)
+             WHERE table_schema IN ({})
+            """.format(_question_marks(binds))
+            LOGGER.info("sql: %s, binds: %s", sql, binds)
+            cursor.execute(sql, binds)
+        else:
+            cursor.execute("""
+            SELECT table_schema,
+                   table_name,
+                   column_name,
+                   data_type,
+                   character_maximum_length,
+                   numeric_precision,
+                   numeric_scale
+              FROM qsys2.syscolumns
+            """)
         yield from cursor
-
 
 def _query_primary_keys(config):
     """Queries the qsys2 primary key catalog and returns an iterator containing
@@ -145,9 +164,7 @@ def _find_primary_keys(config, tables):
 
 
 def _create_column_metadata(cols, schema, pk_columns):
-    mdata = {}
-    mdata.append({'metadata': {'table-key-properties' : pk_columns}, 'breadcrumb': ()})
-
+    mdata = {() : {'table-key-properties' : pk_columns}}
     mdata = metadata.write(mdata, (), "selected-by-default", False)
     for col in cols:
         col_schema = schema.properties[col.column_name]

@@ -5,6 +5,7 @@ The functions herein were taken nearly verbatim from
 https://github.com/singer-io/tap-mysql/"""
 from itertools import dropwhile
 import singer
+from singer import metadata
 import singer.schema
 from singer.schema import Schema
 from singer.catalog import Catalog, CatalogEntry
@@ -127,6 +128,7 @@ def build_state(raw_state, catalog):
         state = singer.set_currently_syncing(state, currently_syncing)
 
     for catalog_entry in catalog.streams:
+        catalog_metadata = metadata.to_map(catalog_entry.metadata)
         replication_key = catalog_metadata.get((), {}).get('replication-key')
         if replication_key:
             state = singer.write_bookmark(state,
