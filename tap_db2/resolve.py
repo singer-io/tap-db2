@@ -141,7 +141,7 @@ def build_state(raw_state, catalog):
             raw_replication_key = singer.get_bookmark(raw_state,
                                                       catalog_entry.tap_stream_id,
                                                       'replication_key')
-            if raw_replication_key == replicaiton_key:
+            if raw_replication_key == replication_key:
                 raw_replication_key_value = singer.get_bookmark(raw_state,
                                                                 catalog_entry.tap_stream_id,
                                                                 'replication_key_value')
