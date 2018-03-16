@@ -106,7 +106,20 @@ If you have this directory, first build the container with
 And now, to run, you must have a config file described above. Set the `host` to
 `localhost` and the port to `8471`. This assumes you have the port 8471 setup
 locally which forwards to a DB2 instance (for example, you may have an SSH
-tunnel running with a command like `ssh -L 8471:db2-host:8471 ssh-host`).
+tunnel running with a command like `ssh -L 8471:db2-host:8471 ssh-host`). Now
+run:
+
+
+```
+./docker/run
+```
+
+This will invoke the tap and share this repositories directory into it. You can
+provide all the usual flags the tap accepts, like:
+
+```
+./docker/run --config config.json --discover
+```
 
 ---
 
