@@ -90,6 +90,37 @@ to use the `port` option, likeso:
 }
 ```
 
+## Development Using Docker
+
+A Dockerfile is provided to aide development of the tap. To use, you must first
+have a copy of the IBM drivers in a directory in this repository called `ibm`.
+Obtaining this is currently outside the scope of these instructions. The
+drivers are proprietary and thus they cannot be included.
+
+If you have this directory, first build the container with
+
+```
+./docker/build
+```
+
+And now, to run, you must have a config file described above. Set the `host` to
+`localhost` and the port to `8471`. This assumes you have the port 8471 setup
+locally which forwards to a DB2 instance (for example, you may have an SSH
+tunnel running with a command like `ssh -L 8471:db2-host:8471 ssh-host`). Now
+run:
+
+
+```
+./docker/run
+```
+
+This will invoke the tap and share this repositories directory into it. You can
+provide all the usual flags the tap accepts, like:
+
+```
+./docker/run --config config.json --discover
+```
+
 ---
 
 Copyright &copy; 2017 Stitch
