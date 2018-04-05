@@ -114,7 +114,7 @@ run:
 ./docker/run
 ```
 
-This will invoke the tap and share this repositories directory into it. You can
+This will invoke the tap and share this repository's directory into it. You can
 provide all the usual flags the tap accepts, like:
 
 ```
