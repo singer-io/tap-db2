@@ -39,11 +39,19 @@ def _get_replication_key(state: dict, catalog_entry: CatalogEntry):
     return ReplicationKey(column, value)
 
 
+def _sql_data_type(catalog_entry, column):
+    return metadata.get(metadata.to_map(catalog_entry.metadata),
+                        breadcrumb=("properties", column),
+                        k="sql-datatype")
+
+
+def _is_timestamp_column(catalog_entry, column):
+    data_type = _sql_data_type(catalog_entry, column)
+    return data_type == "timestmp"  # No that's not a typo
+
+
 def _column_sql(catalog_entry: CatalogEntry, column: str):
-    data_type = metadata.get(metadata.to_map(catalog_entry.metadata),
-                             breadcrumb=("properties", column),
-                             k="sql-datatype")
-    if data_type == "timestmp":  # No that's not a typo
+    if _is_timestamp_column(catalog_entry, column):
         return "{} - CURRENT TIMEZONE".format(_quote(column))
     return _quote(column)
 
@@ -57,8 +65,11 @@ def _create_sql(catalog_entry: CatalogEntry, columns, rep_key: ReplicationKey):
     params = ()
     if not rep_key:
         return select, params
-    if rep_key.value:
-        select += " WHERE {} >= ?".format(_quote(rep_key.column))
+    if rep_key.value is not None:
+        col_sql = _quote(rep_key.column)
+        if _is_timestamp_column(catalog_entry, rep_key.column):
+            col_sql += " - CURRENT TIMEZONE"
+        select += " WHERE {} >= ?".format(col_sql)
         params = (rep_key.value,)
     select += " ORDER BY {} ASC".format(_quote(rep_key.column))
     return select, params
