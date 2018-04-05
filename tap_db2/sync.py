@@ -65,7 +65,7 @@ def _create_sql(catalog_entry: CatalogEntry, columns, rep_key: ReplicationKey):
     params = ()
     if not rep_key:
         return select, params
-    if rep_key.value:
+    if rep_key.value is not None:
         col_sql = _quote(rep_key.column)
         if _is_timestamp_column(catalog_entry, rep_key.column):
             col_sql += " - CURRENT TIMEZONE"
