@@ -171,9 +171,9 @@ def sync(config, state, catalog):
         state = singer.set_currently_syncing(state, catalog_entry.tap_stream_id)
         _emit(singer.StateMessage(value=state))
         if catalog_entry.is_view:
-            key_properties = metadata.to_map(catalog_entry.metadata).get((), {}).get('view-key-properties')
+            key_properties = metadata.to_map(catalog_entry.metadata).get((), {}).get('view-key-properties', [])
         else:
-            key_properties = metadata.to_map(catalog_entry.metadata).get((), {}).get('table-key-properties')
+            key_properties = metadata.to_map(catalog_entry.metadata).get((), {}).get('table-key-properties', [])
 
 
         _emit(singer.SchemaMessage(
