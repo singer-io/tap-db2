@@ -64,7 +64,7 @@ def connection(config):
     # Docs on keywords this driver accepts:
     # https://www.ibm.com/support/knowledgecenter/ssw_ibm_i_71/rzaik/rzaikconnstrkeywordsgeneralprop.htm
     return pyodbc.connect(
-        driver="{iSeries Access ODBC Driver 64-bit}",
+        driver="{IBM i Access ODBC Driver 64-bit}",
         system=config["host"],
         uid=config["user"],
         pwd=config["password"])
