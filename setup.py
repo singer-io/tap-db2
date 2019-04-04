@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(
     name="tap-db2",
-    version="0.3.3",
+    version="0.3.4",
     description="Singer.io tap for extracting data from DB2",
     author="Stitch",
     url="http://singer.io",
