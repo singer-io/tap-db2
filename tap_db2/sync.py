@@ -131,8 +131,19 @@ def _maybe_activate_after_sync(state, catalog_entry, rep_key, stream_version):
     return state
 
 
+def _sync_field(md_map, field_name):
+    field_metadata = md_map.get(("properties", field_name), {})
+    return singer.should_sync_field(field_metadata.get('inclusion'),
+                                    field_metadata.get('selected'),
+                                    True)
+
+
 def _sync_table(config, state, catalog_entry):
-    columns = list(catalog_entry.schema.properties)
+    md_map = metadata.to_map(catalog_entry.metadata)
+    columns = [
+        field_name for field_name in catalog_entry.schema.properties.keys()
+        if _sync_field(md_map, field_name)
+    ]
     if not columns:
         LOGGER.warning(
             "There are no columns selected for table %s, skipping it",
